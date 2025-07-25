@@ -1,0 +1,11 @@
+
+{
+  "functions": {
+    "api/steam.js": {
+      "runtime": "edge"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/steam/(.*)", "destination": "/api/steam" }
+  ]
+}
