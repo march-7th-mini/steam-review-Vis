@@ -1,14 +1,17 @@
+// app/api/steam/route.ts  （Next.js App Router）
+export const runtime = 'edge';   // 告诉 Vercel 用 Edge Runtime [^8^]
 
-export default async (req) => {
-  const url = new URL(req.url);
-  const target = 'https://store.steampowered.com' + url.pathname.replace('/api/steam', '') + url.search;
-  const res = await fetch(target, { method: req.method, headers: req.headers });
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const appid = searchParams.get('appid') || '2277560';
+  const steamUrl =
+    `https://store.steampowered.com/appreviews/${appid}?${searchParams.toString()}`;
+  const res = await fetch(steamUrl);
   return new Response(res.body, {
     status: res.status,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
-    }
+      'Content-Type': 'application/json',
+    },
   });
-};
+}
