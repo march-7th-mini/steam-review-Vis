@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Steam 评论抓取与分析工具 · 路线1版</title>
+    <style>
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;background:#f6f8fa;margin:0;padding:0;color:#24292e}
+        header{background:#1b2838;color:#fff;padding:20px 0;text-align:center}
+        .container{max-width:960px;margin:40px auto;padding:0 20px}
+        .form-group{margin-bottom:20px}
+        label{display:block;margin-bottom:6px;font-weight:600}
+        input[type=text],input[type=number]{width:100%;padding:10px;border:1px solid #d1d9e0;border-radius:6px;font-size:16px}
+        button{background:#2a475e;color:#fff;border:none;padding:12px 24px;border-radius:6px;font-size:16px;cursor:pointer}
+        button:hover{background:#3d6a8e}
+        .progress{margin:20px 0;height:20px;background:#e1e4e8;border-radius:10px;overflow:hidden}
+        .progress-bar{height:100%;background:#28a745;width:0;transition:width .3s}
+        .result{margin-top:40px}
+        .section{background:#fff;border:1px solid #d1d9e0;border-radius:6px;padding:20px;margin-bottom:20px}
+        .section h2{margin-top:0}
+        .tag{margin:4px;padding:4px 8px;background:#f1f8ff;color:#0366d6;border-radius:4px;font-size:14px;display:inline-block}
+        .hidden{display:none}
+        .loader{border:4px solid #f3f3f3;border-top:4px solid #3498db;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:0 auto}
+        @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+    </style>
+</head>
+<body>
+<header><h1>Steam 评论抓取与分析工具（路线1：官方 API）</h1></header>
+
+<div class="container">
+    <div class="form-group">
+        <label>Steam 商店链接</label>
+        <input type="text" id="storeLink" placeholder="https://store.steampowered.com/app/123456/GameName/">
+    </div>
+    <div class="form-group">
+        <label>游戏名称（用于保存文件名）</label>
+        <input type="text" id="gameName" placeholder="GameName">
+    </div>
+    <div class="form-group">
+        <label>需要抓取的评论数量（10-1000）</label>
+        <input type="number" id="commentCount" min="10" max="1000" step="10" value="100">
+    </div>
+    <button onclick="start()">开始抓取并分析</button>
+
+    <div id="progressArea" class="hidden">
+        <div class="progress"><div id="progressBar" class="progress-bar"></div></div>
+        <p id="progressText">准备中…</p>
+        <div class="loader"></div>
+    </div>
+
+    <div id="resultArea" class="result hidden">
+        <div class="section">
+            <h2>统计概览</h2>
+            <p>好评：<span id="positiveCount">0</span> 条（占比 <span id="positivePercent">0%</span>）</p>
+            <p>差评：<span id="negativeCount">0</span> 条（占比 <span id="negativePercent">0%</span>）</p>
+        </div>
+
+        <div class="section">
+            <h2>高频关键词（Top 20）</h2>
+            <div id="keywords"></div>
+        </div>
+
+        <div class="section">
+            <h2>高频短语（Top 20）</h2>
+            <div id="phrases"></div>
+        </div>
+
+        <div class="section">
+            <h2>玩家痛点/诉求</h2>
+            <div id="painPoints"></div>
+        </div>
+
+        <div class="section">
+            <h2>相似评论占比</h2>
+            <p>重复或相似度≥80%的评论占比：<span id="duplicatePercent">0%</span></p>
+        </div>
+
+        <div class="section">
+            <h2>原始数据下载</h2>
+            <button onclick="downloadExcel()">下载 Excel</button>
+        </div>
+    </div>
+</div>
+
+<!-- ExcelJS -->
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+/* ---------- 工具 ---------- */
+const getGameId = link => (link.match(/\/app\/(\d+)/) || [])[1];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ---------- 主流程 ---------- */
+let rawReviews = [];
+let keywordFreq = {};
+let phraseFreq   = {};
+let duplicateMap = new Map();
+
+async function start(){
+    const storeLink = document.getElementById('storeLink').value.trim();
+    const gameName  = document.getElementById('gameName').value.trim();
+    const wantTotal = parseInt(document.getElementById('commentCount').value);
+
+    if(!storeLink || !gameName){ alert('请完整填写商店链接与游戏名称！'); return; }
+    const appid = getGameId(storeLink);
+    if(!appid){ alert('无法提取 AppID！'); return; }
+
+    /* --- 初始化 --- */
+    rawReviews = []; keywordFreq = {}; phraseFreq = {}; duplicateMap.clear();
+    document.getElementById('progressArea').classList.remove('hidden');
+    document.getElementById('resultArea').classList.add('hidden');
+    updateProgress(0, wantTotal, '开始抓取…');
+
+    let cursor = '*';
+    let fetched = 0;
+    while(fetched < wantTotal){
+        const url = `https://store.steampowered.com/appreviews/${appid}?json=1&language=schinese&filter=all&review_type=all&purchase_type=all&num_per_page=100&cursor=${encodeURIComponent(cursor)}`;
+        try{
+            const res = await fetch(url);
+            const data = await res.json();
+            if(!data.success || !data.reviews){ break; }
+            appendReviews(data.reviews, fetched, wantTotal);
+            fetched += data.reviews.length;
+            cursor = data.cursor || '';
+            updateProgress(fetched, wantTotal);
+            if(!cursor) break;      // 没有下一页
+            await sleep(1100);      // 防429
+        }catch(e){
+            console.error(e);
+            updateProgress(fetched, wantTotal, '网络异常，已跳过');
+            break;
+        }
+    }
+
+    analyze();
+    document.getElementById('progressArea').classList.add('hidden');
+    document.getElementById('resultArea').classList.remove('hidden');
+}
+
+/* ---------- 解析 & 存储 ---------- */
+function appendReviews(list, fetched, wantTotal){
+    list.forEach(r=>{
+        const vote = r.voted_up ? '推荐' : '不推荐';
+        const hours = r.author.playtime_forever || 0;
+        const link = `https://steamcommunity.com/profiles/${r.author.steamid}/recommended/${r.recommendationid}`;
+        const body = r.review || '';
+        rawReviews.push([r.author.persona_name || '匿名', vote, hours, link, body]);
+    });
+}
+
+/* ---------- 分析 ---------- */
+function analyze(){
+    const pos = rawReviews.filter(r=>r[1]==='推荐').length;
+    const neg = rawReviews.length - pos;
+
+    const seg = new Intl.Segmenter('zh',{granularity:'word'});
+    rawReviews.forEach(r=>{
+        const words = [...seg.segment(r[4])].map(s=>s.segment).filter(w=>w.length>1&&!stopwords.has(w));
+        words.forEach(w=> keywordFreq[w]=(keywordFreq[w]||0)+1);
+        for(let i=0;i<words.length-1;i++){
+            const ph = words[i]+words[i+1];
+            phraseFreq[ph]=(phraseFreq[ph]||0)+1;
+        }
+        const hash = simpleHash(r[4]);
+        duplicateMap.set(hash,(duplicateMap.get(hash)||0)+1);
+    });
+
+    const total = rawReviews.length;
+    document.getElementById('positiveCount').textContent   = pos;
+    document.getElementById('positivePercent').textContent = (pos/total*100).toFixed(1)+'%';
+    document.getElementById('negativeCount').textContent   = neg;
+    document.getElementById('negativePercent').textContent = (neg/total*100).toFixed(1)+'%';
+
+    renderCloud('keywords', Object.entries(keywordFreq).sort((a,b)=>b[1]-a[1]).slice(0,20));
+    renderCloud('phrases', Object.entries(phraseFreq).sort((a,b)=>b[1]-a[1]).slice(0,20));
+
+    const pains = Object.entries(keywordFreq).filter(([k])=>negativeWords.has(k)).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k}（${v}次）`);
+    document.getElementById('painPoints').innerHTML = pains.length ? pains.join('、') : '暂无显著痛点';
+
+    const dupTotal = [...duplicateMap.values()].filter(v=>v>1).reduce((a,b)=>a+b,0);
+    document.getElementById('duplicatePercent').textContent = (dupTotal/total*100).toFixed(1)+'%';
+}
+
+/* ---------- UI ---------- */
+function renderCloud(id, arr){
+    const div=document.getElementById(id); div.innerHTML='';
+    arr.forEach(([k,v])=>{ const s=document.createElement('span'); s.className='tag'; s.textContent=`${k}(${v})`; div.appendChild(s); });
+}
+function updateProgress(curr,total,msg){
+    const p=Math.min(100,(curr/total*100).toFixed(1));
+    document.getElementById('progressBar').style.width=p+'%';
+    document.getElementById('progressText').textContent=msg||`已抓取 ${curr}/${total}`;
+}
+
+/* ---------- Excel 导出 ---------- */
+function downloadExcel(){
+    const gameName=document.getElementById('gameName').value.trim();
+    const wb=XLSX.utils.book_new();
+    const pos=rawReviews.filter(r=>r[1]==='推荐');
+    const neg=rawReviews.filter(r=>r[1]!=='推荐');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['昵称','推荐/不推荐','游戏时长(分钟)','链接','评论'], ...pos]), '好评');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['昵称','推荐/不推荐','游戏时长(分钟)','链接','评论'], ...neg]), '差评');
+    XLSX.writeFile(wb, `${gameName}_评论.xlsx`);
+}
+
+/* ---------- 辅助词表 ---------- */
+const stopwords = new Set('的 了 在 是 我 有 和 就 不 人 都 一 一个 上 也 很 到 说 要 去 你 会 着 没有 看 好 自己 这'.split(' '));
+const negativeWords = new Set('bug 卡顿 闪退 垃圾 差评 失望 难 卡死 崩溃 恶心 氪金 外挂 挂 贵 烂 肝 无聊 重复 单调 屎'.split(' '));
+function simpleHash(str){ return str.trim().slice(0,100).replace(/\s+/g,''); }
+</script>
+</body>
+</html>
