@@ -7,6 +7,9 @@
 特别注意：浏览器安全策略（CORS）阻止了前端脚本直接访问 store.steampowered.com 的接口。
 
 此工具要想顺利抓取数据，需要浏览器安装「Allow CORS」类扩展插件
+
 Chrome/Edge：扩展商店搜索 「Allow CORS: Access-Control-Allow-Origin」 → 安装 → 打开开关。
+
 重新刷新刚才的 html 文件，即可正常爬取。
+
 缺点：插件只在你的浏览器生效，换电脑/无痕模式需重新开。
