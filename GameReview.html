@@ -112,7 +112,7 @@ async function start(){
     let cursor = '*';
     let fetched = 0;
     while(fetched < wantTotal){
-        const url = `https://steam-review-vis-qps9.vercel.app/api/steam/appreviews/${appid}?json=1&language=schinese&filter=all&review_type=all&purchase_type=all&num_per_page=100&cursor=${encodeURIComponent(cursor)}`;
+        const url = `https://store.steampowered.com/appreviews/${appid}?json=1&language=schinese&filter=all&review_type=all&purchase_type=all&num_per_page=100&cursor=${encodeURIComponent(cursor)}`;
         try{
             const res = await fetch(url);
             const data = await res.json();
