@@ -2,209 +2,916 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>Steam 评论抓取与分析工具 · 路线1版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steam 评论抓取与分析工具</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- 引入 Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;background:#f6f8fa;margin:0;padding:0;color:#24292e}
-        header{background:#1b2838;color:#fff;padding:20px 0;text-align:center}
-        .container{max-width:960px;margin:40px auto;padding:0 20px}
-        .form-group{margin-bottom:20px}
-        label{display:block;margin-bottom:6px;font-weight:600}
-        input[type=text],input[type=number]{width:100%;padding:10px;border:1px solid #d1d9e0;border-radius:6px;font-size:16px}
-        button{background:#2a475e;color:#fff;border:none;padding:12px 24px;border-radius:6px;font-size:16px;cursor:pointer}
-        button:hover{background:#3d6a8e}
-        .progress{margin:20px 0;height:20px;background:#e1e4e8;border-radius:10px;overflow:hidden}
-        .progress-bar{height:100%;background:#28a745;width:0;transition:width .3s}
-        .result{margin-top:40px}
-        .section{background:#fff;border:1px solid #d1d9e0;border-radius:6px;padding:20px;margin-bottom:20px}
-        .section h2{margin-top:0}
-        .tag{margin:4px;padding:4px 8px;background:#f1f8ff;color:#0366d6;border-radius:4px;font-size:14px;display:inline-block}
-        .hidden{display:none}
-        .loader{border:4px solid #f3f3f3;border-top:4px solid #3498db;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:0 auto}
-        @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #2a4d69);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #00c9ff, #92fe9d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .subtitle {
+            color: #a0d2eb;
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(16, 22, 58, 0.7);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        .card {
+            background: rgba(25, 33, 74, 0.8);
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(64, 224, 208, 0.3);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .card-title {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            color: #40e0d0;
+            font-size: 1.4rem;
+        }
+        
+        .card-title i {
+            margin-right: 10px;
+            font-size: 1.6rem;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #a0d2eb;
+            font-weight: 500;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 14px;
+            border-radius: 8px;
+            border: 2px solid rgba(64, 224, 208, 0.3);
+            background: rgba(10, 15, 35, 0.7);
+            color: #fff;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #40e0d0;
+            box-shadow: 0 0 0 3px rgba(64, 224, 208, 0.2);
+        }
+        
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .input-group input {
+            flex: 1;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, #00c9ff, #92fe9d);
+            color: #0f1b3a;
+        }
+        
+        .btn-secondary {
+            background: rgba(64, 224, 208, 0.15);
+            color: #40e0d0;
+            border: 2px solid rgba(64, 224, 208, 0.5);
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .progress-container {
+            margin-top: 30px;
+            display: none;
+        }
+        
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            color: #a0d2eb;
+        }
+        
+        .progress-bar {
+            height: 20px;
+            background: rgba(10, 15, 35, 0.7);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(64, 224, 208, 0.3);
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00c9ff, #92fe9d);
+            border-radius: 10px;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        
+        .result-container {
+            margin-top: 30px;
+            display: none;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: rgba(10, 15, 35, 0.7);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(64, 224, 208, 0.3);
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 10px 0;
+            background: linear-gradient(to right, #00c9ff, #92fe9d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .stat-label {
+            color: #a0d2eb;
+            font-size: 1rem;
+        }
+        
+        .error-message {
+            background: rgba(255, 88, 88, 0.2);
+            border: 1px solid rgba(255, 88, 88, 0.5);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            display: none;
+            color: #ffc4c4;
+        }
+        
+        .analysis-section {
+            margin-top: 25px;
+            padding: 20px;
+            background: rgba(10, 15, 35, 0.7);
+            border-radius: 10px;
+            border-left: 4px solid #40e0d0;
+        }
+        
+        .section-title {
+            margin-bottom: 15px;
+            color: #40e0d0;
+            font-size: 1.2rem;
+        }
+        
+        .tag {
+            margin: 6px;
+            padding: 6px 12px;
+            background: rgba(64, 224, 208, 0.15);
+            color: #40e0d0;
+            border-radius: 20px;
+            font-size: 14px;
+            display: inline-block;
+            transition: all 0.2s ease;
+        }
+        
+        .tag:hover {
+            transform: scale(1.05);
+            background: rgba(64, 224, 208, 0.25);
+        }
+        
+        .tag-cloud {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        
+        .loader {
+            border: 4px solid rgba(64, 224, 208, 0.2);
+            border-top: 4px solid #40e0d0;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .info-text {
+            color: #a0d2eb;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+        
+        .api-info {
+            background: rgba(64, 224, 208, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            border-left: 3px solid #40e0d0;
+        }
+        
+        /* 新增：CORS警告提示样式 */
+        .cors-warning {
+            background: rgba(255, 88, 88, 0.2);
+            border: 1px solid rgba(255, 88, 88, 0.5);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            color: #ffc4c4;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .cors-warning a {
+            color: #40e0d0;
+            text-decoration: underline;
+            font-weight: bold;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #a0d2eb;
+            font-size: 0.9rem;
+        }
+        
+        .section-content {
+            margin-top: 15px;
+        }
+        
+        .highlight {
+            background: rgba(255, 215, 0, 0.2);
+            padding: 2px 5px;
+            border-radius: 4px;
+            color: #ffd700;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
-<header><h1>Steam 评论抓取与分析工具（路线1：官方 API）</h1></header>
-
-<div class="container">
-    <div class="form-group">
-        <label>Steam 商店链接</label>
-        <input type="text" id="storeLink" placeholder="https://store.steampowered.com/app/123456/GameName/">
+    <header>
+        <h1><i class="fab fa-steam"></i> Steam 评论抓取与分析工具</h1>
+        <p class="subtitle">使用Steam官方API获取游戏评论数据，支持10-1,000,000条评论抓取与深度分析</p>
+    </header>
+    
+    <div class="container">
+        <div class="card">
+            <h2 class="card-title"><i class="fas fa-gamepad"></i> 游戏信息</h2>
+            
+            <div class="form-group">
+                <label for="storeLink">Steam 商店链接</label>
+                <input type="text" id="storeLink" placeholder="https://store.steampowered.com/app/123456/GameName/">
+                <p class="info-text">示例：https://store.steampowered.com/app/1761390/_Project_DIVA_MEGA39s/</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="gameName">游戏名称（用于保存文件名）</label>
+                <input type="text" id="gameName" placeholder="例如：初音未来 Project DIVA MEGA39’s＋">
+            </div>
+            
+            <div class="form-group">
+                <label for="commentCount">需要抓取的评论数量 (10-1000000条)</label>
+                <div class="input-group">
+                    <input type="number" id="commentCount" min="10" max="1000000" value="100" step="10">
+                </div>
+                <p class="info-text">提示：Steam API每次最多返回100条评论，系统会自动分页抓取</p>
+            </div>
+            
+            <!-- 新增：CORS警告提示 -->
+            <div class="cors-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>特别注意：</strong>浏览器安全策略（CORS）会阻止前端脚本直接访问 store.steampowered.com 的接口。<br>
+                此工具要想顺利抓取数据，需要浏览器安装「Allow CORS」类扩展插件：<br>
+                <strong>Edge：</strong>扩展商店搜索「<a href="https://microsoftedge.microsoft.com/addons/detail/allow-cors-accesscontro/bhjepjpgngghppolkjdhckmnfphffdag" target="_blank">Allow CORS：Access-Control-Allow-Origin</a>」→ 安装 → 打开开关。
+            </div>
+            
+            <div class="api-info">
+                <i class="fas fa-info-circle"></i> 此工具使用Steam官方API接口：<code>https://store.steampowered.com/appreviews/{appid}</code>
+                抓取公开评论数据。根据Steam API政策，请勿频繁请求。
+            </div>
+            
+            <div class="button-group">
+                <button class="btn btn-primary" id="startBtn">
+                    <i class="fas fa-play-circle"></i> 开始抓取并分析
+                </button>
+                <button class="btn btn-secondary" id="resetBtn">
+                    <i class="fas fa-redo"></i> 重置工具
+                </button>
+            </div>
+        </div>
+        
+        <div class="error-message" id="errorMessage">
+            <i class="fas fa-exclamation-triangle"></i> <span id="errorText"></span>
+        </div>
+        
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-header">
+                <span>抓取进度</span>
+                <span id="progressText">0/100 (0%)</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p class="info-text" id="progressInfo">正在从Steam API获取评论数据...</p>
+            <div class="loader" id="loader"></div>
+        </div>
+        
+        <div class="result-container" id="resultContainer">
+            <h2 class="card-title"><i class="fas fa-chart-line"></i> 分析结果</h2>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalReviews">0</div>
+                    <div class="stat-label">总评论数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="positiveRate">0%</div>
+                    <div class="stat-label">好评率</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="avgPlaytime">0h</div>
+                    <div class="stat-label">平均游戏时间</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="duplicatePercent">0%</div>
+                    <div class="stat-label">相似评论占比</div>
+                </div>
+                <!-- 新增：好评但负面内容统计卡片 -->
+                <div class="stat-card">
+                    <div class="stat-value" id="positiveNegativeContent">0</div>
+                    <div class="stat-label">好评但负面内容</div>
+                </div>
+            </div>
+            
+            <!-- 新增：游戏时长分布图表 -->
+            <div class="analysis-section">
+                <h3 class="section-title"><i class="fas fa-chart-area"></i> 游戏时长分布与评价关系</h3>
+                <canvas id="playtimeChart" width="400" height="200"></canvas>
+            </div>
+            
+            <div class="analysis-section">
+                <h3 class="section-title"><i class="fas fa-key"></i> 高频关键词（Top 20）</h3>
+                <div class="tag-cloud" id="keywords"></div>
+            </div>
+            
+            <div class="analysis-section">
+                <h3 class="section-title"><i class="fas fa-comment-alt"></i> 高频短语（Top 20）</h3>
+                <div class="tag-cloud" id="phrases"></div>
+            </div>
+            
+            <div class="analysis-section">
+                <h3 class="section-title"><i class="fas fa-exclamation-triangle"></i> 玩家痛点/诉求</h3>
+                <div class="section-content" id="painPoints">
+                    <p class="info-text">分析中...</p>
+                </div>
+            </div>
+            
+            <div class="button-group" style="margin-top: 25px;">
+                <button class="btn btn-primary" id="saveBtn">
+                    <i class="fas fa-file-excel"></i> 导出Excel文件
+                </button>
+                <button class="btn btn-secondary" id="newAnalysisBtn">
+                    <i class="fas fa-plus-circle"></i> 新分析
+                </button>
+            </div>
+        </div>
     </div>
-    <div class="form-group">
-        <label>游戏名称（用于保存文件名）</label>
-        <input type="text" id="gameName" placeholder="GameName">
-    </div>
-    <div class="form-group">
-        <label>需要抓取的评论数量（10-1000）</label>
-        <input type="number" id="commentCount" min="10" max="1000" step="10" value="100">
-    </div>
-    <button onclick="start()">开始抓取并分析</button>
+    
+    <footer>
+        <p>Steam Review Scraper & Analyzer Tool &copy; 2025 | 使用官方API路线</p>
+        <p>注意：此工具仅用于教育目的，请遵守Steam API使用政策</p>
+    </footer>
 
-    <div id="progressArea" class="hidden">
-        <div class="progress"><div id="progressBar" class="progress-bar"></div></div>
-        <p id="progressText">准备中…</p>
-        <div class="loader"></div>
-    </div>
-
-    <div id="resultArea" class="result hidden">
-        <div class="section">
-            <h2>统计概览</h2>
-            <p>好评：<span id="positiveCount">0</span> 条（占比 <span id="positivePercent">0%</span>）</p>
-            <p>差评：<span id="negativeCount">0</span> 条（占比 <span id="negativePercent">0%</span>）</p>
-        </div>
-
-        <div class="section">
-            <h2>高频关键词（Top 20）</h2>
-            <div id="keywords"></div>
-        </div>
-
-        <div class="section">
-            <h2>高频短语（Top 20）</h2>
-            <div id="phrases"></div>
-        </div>
-
-        <div class="section">
-            <h2>玩家痛点/诉求</h2>
-            <div id="painPoints"></div>
-        </div>
-
-        <div class="section">
-            <h2>相似评论占比</h2>
-            <p>重复或相似度≥80%的评论占比：<span id="duplicatePercent">0%</span></p>
-        </div>
-
-        <div class="section">
-            <h2>原始数据下载</h2>
-            <button onclick="downloadExcel()">下载 Excel</button>
-        </div>
-    </div>
-</div>
-
-<!-- ExcelJS -->
-<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script>
-/* ---------- 工具 ---------- */
-const getGameId = link => (link.match(/\/app\/(\d+)/) || [])[1];
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-/* ---------- 主流程 ---------- */
-let rawReviews = [];
-let keywordFreq = {};
-let phraseFreq   = {};
-let duplicateMap = new Map();
-
-async function start(){
-    const storeLink = document.getElementById('storeLink').value.trim();
-    const gameName  = document.getElementById('gameName').value.trim();
-    const wantTotal = parseInt(document.getElementById('commentCount').value);
-
-    if(!storeLink || !gameName){ alert('请完整填写商店链接与游戏名称！'); return; }
-    const appid = getGameId(storeLink);
-    if(!appid){ alert('无法提取 AppID！'); return; }
-
-    /* --- 初始化 --- */
-    rawReviews = []; keywordFreq = {}; phraseFreq = {}; duplicateMap.clear();
-    document.getElementById('progressArea').classList.remove('hidden');
-    document.getElementById('resultArea').classList.add('hidden');
-    updateProgress(0, wantTotal, '开始抓取…');
-
-    let cursor = '*';
-    let fetched = 0;
-    while(fetched < wantTotal){
-        const url = `https://store.steampowered.com/appreviews/${appid}?json=1&language=schinese&filter=all&review_type=all&purchase_type=all&num_per_page=100&cursor=${encodeURIComponent(cursor)}`;
-        try{
-            const res = await fetch(url);
-            const data = await res.json();
-            if(!data.success || !data.reviews){ break; }
-            appendReviews(data.reviews, fetched, wantTotal);
-            fetched += data.reviews.length;
-            cursor = data.cursor || '';
-            updateProgress(fetched, wantTotal);
-            if(!cursor) break;      // 没有下一页
-            await sleep(1100);      // 防429
-        }catch(e){
-            console.error(e);
-            updateProgress(fetched, wantTotal, '网络异常，已跳过');
-            break;
-        }
-    }
-
-    analyze();
-    document.getElementById('progressArea').classList.add('hidden');
-    document.getElementById('resultArea').classList.remove('hidden');
-}
-
-/* ---------- 解析 & 存储 ---------- */
-function appendReviews(list, fetched, wantTotal){
-    list.forEach(r=>{
-        const vote = r.voted_up ? '推荐' : '不推荐';
-        const hours = r.author.playtime_forever || 0;
-        const link = `https://steamcommunity.com/profiles/${r.author.steamid}/recommended/${r.recommendationid}`;
-        const body = r.review || '';
-        rawReviews.push([r.author.persona_name || '匿名', vote, hours, link, body]);
-    });
-}
-
-/* ---------- 分析 ---------- */
-function analyze(){
-    const pos = rawReviews.filter(r=>r[1]==='推荐').length;
-    const neg = rawReviews.length - pos;
-
-    const seg = new Intl.Segmenter('zh',{granularity:'word'});
-    rawReviews.forEach(r=>{
-        const words = [...seg.segment(r[4])].map(s=>s.segment).filter(w=>w.length>1&&!stopwords.has(w));
-        words.forEach(w=> keywordFreq[w]=(keywordFreq[w]||0)+1);
-        for(let i=0;i<words.length-1;i++){
-            const ph = words[i]+words[i+1];
-            phraseFreq[ph]=(phraseFreq[ph]||0)+1;
-        }
-        const hash = simpleHash(r[4]);
-        duplicateMap.set(hash,(duplicateMap.get(hash)||0)+1);
-    });
-
-    const total = rawReviews.length;
-    document.getElementById('positiveCount').textContent   = pos;
-    document.getElementById('positivePercent').textContent = (pos/total*100).toFixed(1)+'%';
-    document.getElementById('negativeCount').textContent   = neg;
-    document.getElementById('negativePercent').textContent = (neg/total*100).toFixed(1)+'%';
-
-    renderCloud('keywords', Object.entries(keywordFreq).sort((a,b)=>b[1]-a[1]).slice(0,20));
-    renderCloud('phrases', Object.entries(phraseFreq).sort((a,b)=>b[1]-a[1]).slice(0,20));
-
-    const pains = Object.entries(keywordFreq).filter(([k])=>negativeWords.has(k)).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k}（${v}次）`);
-    document.getElementById('painPoints').innerHTML = pains.length ? pains.join('、') : '暂无显著痛点';
-
-    const dupTotal = [...duplicateMap.values()].filter(v=>v>1).reduce((a,b)=>a+b,0);
-    document.getElementById('duplicatePercent').textContent = (dupTotal/total*100).toFixed(1)+'%';
-}
-
-/* ---------- UI ---------- */
-function renderCloud(id, arr){
-    const div=document.getElementById(id); div.innerHTML='';
-    arr.forEach(([k,v])=>{ const s=document.createElement('span'); s.className='tag'; s.textContent=`${k}(${v})`; div.appendChild(s); });
-}
-function updateProgress(curr,total,msg){
-    const p=Math.min(100,(curr/total*100).toFixed(1));
-    document.getElementById('progressBar').style.width=p+'%';
-    document.getElementById('progressText').textContent=msg||`已抓取 ${curr}/${total}`;
-}
-
-/* ---------- Excel 导出 ---------- */
-function downloadExcel(){
-    const gameName=document.getElementById('gameName').value.trim();
-    const wb=XLSX.utils.book_new();
-    const pos=rawReviews.filter(r=>r[1]==='推荐');
-    const neg=rawReviews.filter(r=>r[1]!=='推荐');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['昵称','推荐/不推荐','游戏时长(分钟)','链接','评论'], ...pos]), '好评');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['昵称','推荐/不推荐','游戏时长(分钟)','链接','评论'], ...neg]), '差评');
-    XLSX.writeFile(wb, `${gameName}_评论.xlsx`);
-}
-
-/* ---------- 辅助词表 ---------- */
-const stopwords = new Set('的 了 在 是 我 有 和 就 不 人 都 一 一个 上 也 很 到 说 要 去 你 会 着 没有 看 好 自己 这'.split(' '));
-const negativeWords = new Set('bug 卡顿 闪退 垃圾 差评 失望 难 卡死 崩溃 恶心 氪金 外挂 挂 贵 烂 肝 无聊 重复 单调 屎'.split(' '));
-function simpleHash(str){ return str.trim().slice(0,100).replace(/\s+/g,''); }
-</script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取DOM元素
+            const storeLinkInput = document.getElementById('storeLink');
+            const gameNameInput = document.getElementById('gameName');
+            const commentCountInput = document.getElementById('commentCount');
+            const startBtn = document.getElementById('startBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const saveBtn = document.getElementById('saveBtn');
+            const newAnalysisBtn = document.getElementById('newAnalysisBtn');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const progressInfo = document.getElementById('progressInfo');
+            const resultContainer = document.getElementById('resultContainer');
+            const errorMessage = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            const totalReviewsEl = document.getElementById('totalReviews');
+            const positiveRateEl = document.getElementById('positiveRate');
+            const avgPlaytimeEl = document.getElementById('avgPlaytime');
+            const duplicatePercentEl = document.getElementById('duplicatePercent');
+            const positiveNegativeContentEl = document.getElementById('positiveNegativeContent');
+            const keywordsEl = document.getElementById('keywords');
+            const phrasesEl = document.getElementById('phrases');
+            const painPointsEl = document.getElementById('painPoints');
+            const loader = document.getElementById('loader');
+            const playtimeChartEl = document.getElementById('playtimeChart');
+            
+            // 存储评论数据
+            let rawReviews = [];
+            let keywordFreq = {};
+            let phraseFreq = {};
+            let duplicateMap = new Map();
+            let playtimeChart = null; // 用于存储图表实例
+            
+            // 停用词和负面词（已优化，增加了情感相关词汇）
+            const stopwords = new Set('的 了 在 是 我 有 和 就 不 人 都 一 一个 上 也 很 到 说 要 去 你 会 着 没有 看 好 自己 这 还 真的 特别 感觉 觉得 有点 一些 一个 那种 就是 那种 那种的'.split(' '));
+            const negativeWords = new Set('bug 卡顿 闪退 垃圾 差评 失望 难 卡死 崩溃 恶心 氪金 外挂 挂 贵 烂 肝 无聊 重复 单调 屎 掉线 延迟 优化差 服务器 广告 付费 收费 更新慢 垃圾游戏 辣鸡 恶心 屎 垃圾 烂 垃圾玩意 垃圾游戏 垃圾游戏 垃圾游戏 垃圾游戏'.split(' '));
+            
+            // 开始抓取和分析
+            startBtn.addEventListener('click', async function() {
+                const storeLink = storeLinkInput.value.trim();
+                const gameName = gameNameInput.value.trim();
+                const wantTotal = parseInt(commentCountInput.value);
+                
+                // 验证输入
+                if (!storeLink) {
+                    showError('请输入Steam商店链接');
+                    return;
+                }
+                
+                if (!gameName) {
+                    showError('请输入游戏名称');
+                    return;
+                }
+                
+                if (wantTotal < 10 || wantTotal > 1000000) {
+                    showError('评论数量必须在10-1000000之间');
+                    return;
+                }
+                
+                // 提取appID
+                const appId = extractAppId(storeLink);
+                if (!appId) {
+                    showError('无法从链接中提取appID，请检查链接格式');
+                    return;
+                }
+                
+                // 重置数据
+                rawReviews = []; 
+                keywordFreq = {}; 
+                phraseFreq = {}; 
+                duplicateMap.clear();
+                
+                // 显示进度条
+                showProgress();
+                progressInfo.textContent = "正在连接Steam API...";
+                loader.style.display = 'block';
+                
+                try {
+                    let cursor = '*';
+                    let fetched = 0;
+                    let totalPlaytime = 0;
+                    
+                    while (fetched < wantTotal) {
+                        const url = `https://store.steampowered.com/appreviews/${appId}?json=1&language=schinese&filter=all&review_type=all&purchase_type=all&num_per_page=100&cursor=${encodeURIComponent(cursor)}`;
+                        
+                        const res = await fetch(url);
+                        const data = await res.json();
+                        
+                        if (!data.success || !data.reviews) {
+                            break;
+                        }
+                        
+                        // 处理评论数据
+                        data.reviews.forEach(r => {
+                            const vote = r.voted_up ? '推荐' : '不推荐';
+                            const hours = Math.floor((r.author.playtime_forever || 0) / 60);
+                            const link = `https://steamcommunity.com/profiles/${r.author.steamid}/recommended/${r.recommendationid}`;
+                            const body = r.review || '';
+                            
+                            rawReviews.push({
+                                author: r.author.persona_name || '匿名',
+                                vote: vote,
+                                hours: hours,
+                                link: link,
+                                content: body
+                            });
+                            
+                            totalPlaytime += hours;
+                        });
+                        
+                        fetched += data.reviews.length;
+                        cursor = data.cursor || '';
+                        
+                        // 更新进度
+                        const progress = Math.min(Math.ceil((fetched / wantTotal) * 100), 100);
+                        updateProgress(fetched, wantTotal, progress);
+                        progressInfo.textContent = `已获取 ${fetched}/${wantTotal} 条评论 (${progress}%)`;
+                        
+                        if (!cursor) break;
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                    
+                    // 抓取完成
+                    if (rawReviews.length === 0) {
+                        showError('未获取到任何评论数据');
+                        hideProgress();
+                        return;
+                    }
+                    
+                    // 分析评论
+                    analyzeReviews(totalPlaytime);
+                    
+                    // 显示结果
+                    resultContainer.style.display = 'block';
+                    progressContainer.style.display = 'none';
+                    loader.style.display = 'none';
+                    
+                } catch (error) {
+                    console.error('抓取失败:', error);
+                    showError(`抓取失败: ${error.message}`);
+                    hideProgress();
+                    loader.style.display = 'none';
+                }
+            });
+            
+            // 分析评论（已优化分词逻辑）
+            function analyzeReviews(totalPlaytime) {
+                // 计算基本统计数据
+                const total = rawReviews.length;
+                const positive = rawReviews.filter(r => r.vote === '推荐').length;
+                const positivePercent = (positive / total * 100).toFixed(1);
+                const avgPlaytime = totalPlaytime > 0 ? (totalPlaytime / total).toFixed(1) : 0;
+                
+                // 计算好评但负面内容的评论数量
+                let positiveNegativeContent = 0;
+                
+                // 计算词频（优化分词逻辑）
+                const seg = new Intl.Segmenter('zh', {granularity: 'word'});
+                
+                // 游戏时长分布数据
+                const playtimeBins = {
+                    '0-10h': { positive: 0, negative: 0 },
+                    '10-50h': { positive: 0, negative: 0 },
+                    '50-100h': { positive: 0, negative: 0 },
+                    '100-500h': { positive: 0, negative: 0 },
+                    '500h+': { positive: 0, negative: 0 }
+                };
+                
+                rawReviews.forEach(r => {
+                    // 分词处理（优化：去除停用词和单字词）
+                    const words = [...seg.segment(r.content)]
+                        .map(s => s.segment.trim())
+                        .filter(w => w.length > 1 && !stopwords.has(w));
+                    
+                    // 检测是否为负面内容
+                    const hasNegative = words.some(w => negativeWords.has(w));
+                    if (r.vote === '推荐' && hasNegative) {
+                        positiveNegativeContent++;
+                    }
+                    
+                    // 关键词统计（优化：过滤更严格）
+                    words.forEach(w => {
+                        if (!stopwords.has(w) && w.length > 1) {
+                            keywordFreq[w] = (keywordFreq[w] || 0) + 1;
+                        }
+                    });
+                    
+                    // 短语统计（优化：过滤停用词）
+                    for (let i = 0; i < words.length - 1; i++) {
+                        const phrase = words[i] + words[i + 1];
+                        if (!stopwords.has(words[i]) && !stopwords.has(words[i + 1]) && phrase.length > 3) {
+                            phraseFreq[phrase] = (phraseFreq[phrase] || 0) + 1;
+                        }
+                    }
+                    
+                    // 相似评论检测
+                    const hash = simpleHash(r.content);
+                    duplicateMap.set(hash, (duplicateMap.get(hash) || 0) + 1);
+                    
+                    // 游戏时长分布统计
+                    const hours = r.hours;
+                    let bin;
+                    if (hours < 10) bin = '0-10h';
+                    else if (hours < 50) bin = '10-50h';
+                    else if (hours < 100) bin = '50-100h';
+                    else if (hours < 500) bin = '100-500h';
+                    else bin = '500h+';
+                    
+                    if (r.vote === '推荐') {
+                        playtimeBins[bin].positive++;
+                    } else {
+                        playtimeBins[bin].negative++;
+                    }
+                });
+                
+                // 计算相似评论比例
+                const dupTotal = [...duplicateMap.values()].filter(v => v > 1).reduce((a, b) => a + b, 0);
+                const dupPercent = (dupTotal / total * 100).toFixed(1);
+                
+                // 识别玩家痛点
+                const pains = Object.entries(keywordFreq)
+                    .filter(([k]) => negativeWords.has(k))
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 10)
+                    .map(([k, v]) => `<span class="tag">${k} <span class="highlight">${v}次</span></span>`);
+                
+                // 更新UI
+                totalReviewsEl.textContent = total;
+                positiveRateEl.textContent = `${positivePercent}%`;
+                avgPlaytimeEl.textContent = `${avgPlaytime}h`;
+                duplicatePercentEl.textContent = `${dupPercent}%`;
+                positiveNegativeContentEl.textContent = positiveNegativeContent;
+                
+                // 渲染关键词云
+                renderTagCloud(keywordsEl, Object.entries(keywordFreq)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 20));
+                
+                // 渲染短语云
+                renderTagCloud(phrasesEl, Object.entries(phraseFreq)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 20));
+                
+                // 显示玩家痛点
+                painPointsEl.innerHTML = pains.length > 0 ? 
+                    pains.join(' ') : 
+                    '<p class="info-text">未检测到显著痛点</p>';
+                
+                // 绘制游戏时长分布图表
+                renderPlaytimeChart(playtimeBins);
+            }
+            
+            // 绘制游戏时长分布图表
+            function renderPlaytimeChart(data) {
+                const ctx = playtimeChartEl.getContext('2d');
+                
+                // 如果已有图表实例，先销毁
+                if (playtimeChart) {
+                    playtimeChart.destroy();
+                }
+                
+                playtimeChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(data),
+                        datasets: [
+                            {
+                                label: '好评',
+                                data: Object.values(data).map(d => d.positive),
+                                backgroundColor: 'rgba(64, 224, 208, 0.7)',
+                                borderColor: 'rgba(64, 224, 208, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: '差评',
+                                data: Object.values(data).map(d => d.negative),
+                                backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                                borderColor: 'rgba(255, 99, 132, 1)',
+                                borderWidth: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: '#a0d2eb'
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    color: '#a0d2eb'
+                                },
+                                grid: {
+                                    color: 'rgba(160, 210, 235, 0.2)'
+                                }
+                            },
+                            y: {
+                                ticks: {
+                                    color: '#a0d2eb'
+                                },
+                                grid: {
+                                    color: 'rgba(160, 210, 235, 0.2)'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // 渲染标签云
+            function renderTagCloud(container, items) {
+                container.innerHTML = '';
+                items.forEach(([text, count]) => {
+                    const tag = document.createElement('span');
+                    tag.className = 'tag';
+                    tag.textContent = `${text} (${count})`;
+                    container.appendChild(tag);
+                });
+            }
+            
+            // 导出Excel
+            saveBtn.addEventListener('click', function() {
+                if (rawReviews.length === 0) {
+                    showError('没有可导出的评论数据');
+                    return;
+                }
+                
+                const gameName = gameNameInput.value.trim() || 'steam_reviews';
+                
+                // 创建工作簿
+                const wb = XLSX.utils.book_new();
+                
+                // 准备数据
+                const data = [
+                    ['玩家昵称', '推荐/不推荐', '游戏时长(小时)', '链接', '评论内容'],
+                    ...rawReviews.map(r => [r.author, r.vote, r.hours, r.link, r.content])
+                ];
+                
+                // 创建工作表
+                const ws = XLSX.utils.aoa_to_sheet(data);
+                
+                // 添加工作表到工作簿
+                XLSX.utils.book_append_sheet(wb, ws, '游戏评论');
+                
+                // 导出文件
+                XLSX.writeFile(wb, `${gameName}_评论分析.xlsx`);
+                
+                // 显示成功提示
+                saveBtn.innerHTML = '<i class="fas fa-check"></i> 导出成功!';
+                setTimeout(() => {
+                    saveBtn.innerHTML = '<i class="fas fa-file-excel"></i> 导出Excel文件';
+                }, 2000);
+            });
+            
+            // 重置工具
+            resetBtn.addEventListener('click', function() {
+                storeLinkInput.value = '';
+                gameNameInput.value = '';
+                commentCountInput.value = '100';
+                rawReviews = [];
+                hideProgress();
+                resultContainer.style.display = 'none';
+                errorMessage.style.display = 'none';
+                loader.style.display = 'none';
+                if (playtimeChart) {
+                    playtimeChart.destroy();
+                    playtimeChart = null;
+                }
+            });
+            
+            // 新分析
+            newAnalysisBtn.addEventListener('click', function() {
+                storeLinkInput.value = '';
+                gameNameInput.value = '';
+                commentCountInput.value = '100';
+                rawReviews = [];
+                resultContainer.style.display = 'none';
+                errorMessage.style.display = 'none';
+                if (playtimeChart) {
+                    playtimeChart.destroy();
+                    playtimeChart = null;
+                }
+            });
+            
+            // 提取appID
+            function extractAppId(url) {
+                const regex = /app\/(\d+)/;
+                const match = url.match(regex);
+                return match ? match[1] : null;
+            }
+            
+            // 简单哈希函数
+            function simpleHash(str) {
+                return str.trim().slice(0, 100).replace(/\s+/g, '');
+            }
+            
+            // 显示错误信息
+            function showError(message) {
+                errorText.textContent = message;
+                errorMessage.style.display = 'block';
+                
+                // 5秒后自动隐藏错误信息
+                setTimeout(() => {
+                    errorMessage.style.display = 'none';
+                }, 5000);
+            }
+            
+            // 显示进度条
+            function showProgress() {
+                progressContainer.style.display = 'block';
+                resultContainer.style.display = 'none';
+                errorMessage.style.display = 'none';
+            }
+            
+            // 隐藏进度条
+            function hideProgress() {
+                progressContainer.style.display = 'none';
+            }
+            
+            // 更新进度
+            function updateProgress(current, total, percent) {
+                progressFill.style.width = `${percent}%`;
+                progressText.textContent = `${current}/${total} (${percent}%)`;
+            }
+        });
+    </script>
 </body>
 </html>
